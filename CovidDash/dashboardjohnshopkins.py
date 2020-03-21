@@ -25,7 +25,8 @@ df_world = jh.get_current_world()
 world_fig = go.Figure()
 world_fig.add_trace(go.Scatter(x=df_world.date,y=df_world.confirmed,
                     mode='lines',
-                    name='confirmed'))
+                    name='confirmed'
+                    ))
 world_fig.add_trace(go.Scatter(x=df_world.date, y=df_world.sick,
                     mode='lines',
                     name='active'))
@@ -61,6 +62,24 @@ controls = html.Div(
     
 )
 
+country_card = dbc.Card(
+    [
+        dbc.CardImg(id='country_flag'),
+        dbc.CardBody(
+            [
+                
+                html.H4("Card title", className="card-title", id='card_title_country'),
+                html.P(
+                    "Some quick example text to build on the card title and "
+                    "make up the bulk of the card's content.",
+                    className="card-text",
+                )
+            ]
+        ),
+    ],
+    style={"width": "18rem"},
+)
+
 
 
 country_table = dash_table.DataTable(
@@ -72,24 +91,16 @@ country_table = dash_table.DataTable(
 
 
 graph_country = dcc.Graph(
-        id = "gCountry"
+        id = "gCountry",
+        config={
+        'displayModeBar': False
+    }
 )
 
 
-country_tile = html.Div(
-    [
-        dbc.Row([dbc.Col(controls, md=4)]),
-        dbc.Row([graph_country])
-        
-        
-        ]
-    
-    
-    )
 
-
-graphRow0 = dbc.Row([dbc.Col(controls, md=4)])
-graphRow1 = dbc.Row([dbc.Col(graph_world, md=4), dbc.Col(graph_country, md=4)])
+graphRow0 = dbc.Row([dbc.Col(controls, md=4), dbc.Col(graph_world, md=4)])
+graphRow1 = dbc.Row([dbc.Col(country_card, md=2), dbc.Col(graph_country, md=6)])
 graphRow2 = dbc.Row([dbc.Col(country_table, md = 8)])
 
 app.layout = html.Div([html.Br(), graphRow0, graphRow1, graphRow2])
@@ -114,6 +125,7 @@ def make_graph(country):
                         name='active'))
     country_fig.add_trace(go.Scatter(x=plot_data.date, y=plot_data.deaths,
                         mode='lines', name='deaths'))
+    #country_fig.update_layout(config={"displayModeBar": False})
     return country_fig
 
 
@@ -121,16 +133,21 @@ def make_graph(country):
 @app.callback(
     [
     Output("table", "columns"),
-    Output("table", "data")
+    Output("table", "data"),
+    Output("card_title_country", "children"),
+    Output("country_flag", 'src')
     ],
     [
         Input('country', "value")
     ],
 )
-def make_table(country):
+def update_country_data(country):
     table_data = df_jh[df_jh['Country/Region']==country].set_index('date').sort_index(ascending=False).head(10).reset_index()
-    return [[{"name": i, "id": i} for i in table_data.columns],table_data.to_dict('records')]
+    iso2 = table_data.ISO2.max()
+    return [[{"name": i, "id": i} for i in table_data.columns],table_data.to_dict('records'), [country], "https://raw.githubusercontent.com/hjnilsson/country-flags/master/png100px/" + iso2.lower() + '.png']
     
+
+
 
 
 

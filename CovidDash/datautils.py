@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import requests
+from bs4 import BeautifulSoup
 
 
 class JHdata:
@@ -23,9 +25,22 @@ class JHdata:
         df_recovered = df_recovered_raw.melt(id_vars=['Province/State', 'Country/Region','Lat','Long'], var_name='date', value_name='cnt') \
             .assign(date=lambda x : pd.to_datetime(x['date'])) \
             .assign(type="recovered")
-        
         df_covid19 = pd.concat([df_confirmed, df_deaths, df_recovered]).reset_index(drop=True)
-        df_covid_19_pivot = df_covid19.pivot_table(index=['Country/Region', 'date'], columns='type', values='cnt', aggfunc='sum').assign(sick=lambda x: x['confirmed'] - x['deaths'] - x['recovered']).reset_index()
+            
+        # get country codes
+        url_codes = "https://countrycode.org/"
+        codes_html = requests.get(url_codes).text
+        soup = BeautifulSoup(codes_html, 'html.parser')
+        code_table = soup.find('table', {'data-sort-name':'countrycode'})
+        df_cc = pd.read_html(str(code_table))[0]
+        df_cc[['ISO2', 'ISO3']] = df_cc['ISO CODES'].str.split(' / ', expand=True)
+        df_covid19['country_key'] =df_covid19['Country/Region']
+        df_covid19['country_key'] = df_covid19['country_key'].replace({'Mainland China':'China', 'US':'United States', 'UK':'United Kingdom', 'North Macedonia':'Macedonia', 'Others':np.nan})
+        # merge data
+        df_covid19 = df_covid19.merge(df_cc, left_on='country_key', right_on='COUNTRY')
+        
+        
+        df_covid_19_pivot = df_covid19.pivot_table(index=['Country/Region', 'ISO3', 'ISO2', 'date'], columns='type', values='cnt', aggfunc='sum').assign(sick=lambda x: x['confirmed'] - x['deaths'] - x['recovered']).reset_index()
         return df_covid_19_pivot
     def get_last_update(self):
         return self.df.date.max()
