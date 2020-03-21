@@ -1,8 +1,4 @@
-'''
-Created on 20.03.2020
 
-@author: norma
-'''
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
