@@ -2,6 +2,7 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_table
 import dash_bootstrap_components as dbc
 import numpy as np
 import pandas as pd
@@ -10,9 +11,9 @@ from dash.dependencies import Input, Output, State
 
 import plotly
 import plotly.graph_objs as go
-import data
+import datautils
 
-jh = data.JHdata()
+jh = datautils.JHdata()
 
 
 df_jh = jh.df
@@ -44,7 +45,9 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 
 controls = html.Div(
+    
     [
+        html.H4('Choose country:'),
         dcc.Dropdown(
             options= [
                 
@@ -60,86 +63,13 @@ controls = html.Div(
 
 
 
-#graphRow0 = dbc.Row([dbc.Col(controls, id='card1', md=3)])
+country_table = dash_table.DataTable(
+    id='table',
+    #columns=[{"name": i, "id": i} for i in df.columns],
+    #data=df.to_dict('records')
+)
 
-pie = dcc.Graph(
-        id = "pieGraph",
-        figure = {
-          "data": [
-            {
-              "values": [800, 345, 500],
-              "labels": [
-                "Positive",
-                "Negative",
-                "Neutral"
-              ],
-              "name": "Sentiment",
-              "hoverinfo":"label+name+percent",
-              "hole": .7,
-              "type": "pie",
-              "marker" : dict(color=['#05C7F2','#D90416','#D9CB04'])
-              }],
-          "layout": {
-                "title" : dict(text ="Sentiment Analysis",
-                               font =dict(
-                               size=20,
-                               color = 'white')),
-                "paper_bgcolor":"#111111",
-                "width": "2000",
-                "annotations": [
-                    {
-                        "font": {
-                            "size": 20
-                        },
-                        "showarrow": False,
-                        "text": "",
-                        "x": 0.2,
-                        "y": 0.2
-                    }
-                ],
-                "showlegend": False
-              }
-        }
-)
-bar = dcc.Graph(
-        id = "3",
-        figure ={
-                  "data": [
-                  {
-                          'x':['Positive', 'Negative', 'Neutral'],
-                          'y':[800, 345, 500],
-                          'name':'SF Zoo',
-                          'type':'bar',
-                          'marker' :dict(color=[        '#05C7F2','#D90416','#D9CB04']),
-                  }],
-                "layout": {
-                      "title" : dict(text ="Overall Sentiments",
-                                     font =dict(
-                                     size=20,
-                                     color = 'white')),
-                      "xaxis" : dict(tickfont=dict(
-                          color='white')),
-                      "yaxis" : dict(tickfont=dict(
-                          color='white')),
-                      "paper_bgcolor":"#111111",
-                      "plot_bgcolor":"#111111",
-                      "width": "2000",
-                      #"grid": {"rows": 0, "columns": 0},
-                      "annotations": [
-                          {
-                              "font": {
-                                  "size": 20
-                              },
-                              "showarrow": False,
-                              "text": "",
-                              "x": 0.2,
-                              "y": 0.2
-                          }
-                      ],
-                      "showlegend": False
-                  }
-              }
-)
+
 
 graph_country = dcc.Graph(
         id = "gCountry"
@@ -158,10 +88,11 @@ country_tile = html.Div(
     )
 
 
+graphRow0 = dbc.Row([dbc.Col(controls, md=4)])
+graphRow1 = dbc.Row([dbc.Col(graph_world, md=4), dbc.Col(graph_country, md=4)])
+graphRow2 = dbc.Row([dbc.Col(country_table, md = 8)])
 
-
-graphRow1 = dbc.Row([dbc.Col(graph_world, md=4), dbc.Col(country_tile)])
-app.layout = html.Div([html.Br(), graphRow1])
+app.layout = html.Div([html.Br(), graphRow0, graphRow1, graphRow2])
 
 
 @app.callback(
@@ -184,6 +115,22 @@ def make_graph(country):
     country_fig.add_trace(go.Scatter(x=plot_data.date, y=plot_data.deaths,
                         mode='lines', name='deaths'))
     return country_fig
+
+
+
+@app.callback(
+    [
+    Output("table", "columns"),
+    Output("table", "data")
+    ],
+    [
+        Input('country', "value")
+    ],
+)
+def make_table(country):
+    table_data = df_jh[df_jh['Country/Region']==country].set_index('date').sort_index(ascending=False).head(10).reset_index()
+    return [[{"name": i, "id": i} for i in table_data.columns],table_data.to_dict('records')]
+    
 
 
 
