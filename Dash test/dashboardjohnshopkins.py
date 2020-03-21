@@ -47,40 +47,24 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 
 
-controls = dbc.Card(
+controls = html.Div(
     [
-        dbc.FormGroup(
-            [
-                dbc.Label('country'),
-                dcc.Dropdown(
-                    id="country",
-                    options=[
-                        {"label": col, "value": col} for col in jh.get_countries()
-                    ],
-                    value="Germany",
-                ),
+        dcc.Dropdown(
+            options= [
+                
+                {'label':col, 'value':col} for col in jh.get_countries()
             ]
+            , id='country', value='Germany'
         ),
-        dbc.FormGroup(
-            [
-                dbc.Label("type"),
-                dcc.Dropdown(
-                    id="type",
-                    options=[
-                        {"label": col, "value": col} for col in df_jh.columns
-                    ],
-                    value="sepal width (cm)",
-                ),
-            ]
-    ),
 
-    ],
-    body=True
+
+    ]
     
 )
 
 
-graphRow0 = dbc.Row([dbc.Col(id='card1', children=[controls], md=3)])
+
+#graphRow0 = dbc.Row([dbc.Col(controls, id='card1', md=3)])
 
 pie = dcc.Graph(
         id = "pieGraph",
@@ -166,22 +150,31 @@ graph_country = dcc.Graph(
 )
 
 
+country_tile = html.Div(
+    [
+        dbc.Row([dbc.Col(controls, md=4)]),
+        dbc.Row([graph_country])
+        
+        
+        ]
+    
+    
+    )
 
 
 
 
-graphRow1 = dbc.Row([dbc.Col(graph_world, md=4), dbc.Col(graph_country, md=4)])
-app.layout = html.Div([graphRow0, html.Br(), graphRow1])
+graphRow1 = dbc.Row([dbc.Col(graph_world, md=4), dbc.Col(country_tile)])
+app.layout = html.Div([html.Br(), graphRow1])
 
 
 @app.callback(
     Output("gCountry", "figure"),
     [
-        Input('country', "value"),
-        Input("type", "value"),
+        Input('country', "value")
     ],
 )
-def make_graph(country, type):
+def make_graph(country):
     # minimal input validation, make sure there's at least one cluster
     plot_data = df_jh[df_jh['Country/Region']==country]
     #fig2 = px.bar(plot_data, x='date', y='confirmed')
@@ -194,8 +187,8 @@ def make_graph(country, type):
                         name='active'))
     country_fig.add_trace(go.Scatter(x=plot_data.date, y=plot_data.deaths,
                         mode='lines', name='deaths'))
-    country_fig.update_layout(title_text="{}".format(country))
     return country_fig
+
 
 
 if __name__=='__main__':
