@@ -35,7 +35,7 @@ class JHdata:
         df_cc = pd.read_html(str(code_table))[0]
         df_cc[['ISO2', 'ISO3']] = df_cc['ISO CODES'].str.split(' / ', expand=True)
         df_covid19['country_key'] =df_covid19['Country/Region']
-        df_covid19['country_key'] = df_covid19['country_key'].replace({'Mainland China':'China', 'US':'United States', 'UK':'United Kingdom', 'North Macedonia':'Macedonia', 'Others':np.nan})
+        df_covid19['country_key'] = df_covid19['country_key'].replace({'Mainland China':'China', 'US':'United States', 'UK':'United Kingdom', 'Korea, South':'South Korea','North Macedonia':'Macedonia', 'Others':np.nan})
     
         # merge data
         df_covid19 = df_covid19.merge(df_cc, left_on='country_key', right_on='COUNTRY')
