@@ -60,7 +60,7 @@ controls = html.Div(
                 
                 {'label':col, 'value':col} for col in jh.get_countries()
             ]
-            , id='country', value=['Germany'], multi=True
+            , id='country', value='Germany'
         ),
 
 
@@ -109,7 +109,7 @@ graphRow0 = dbc.Row([dbc.Col(controls, md=4), dbc.Col(graph_map, md=4)])
 graphRow1 = dbc.Row([dbc.Col(country_card, md=2), dbc.Col(graph_country, md=6)])
 graphRow2 = dbc.Row([dbc.Col(country_table, md = 8)])
 
-app.layout = html.Div([html.Br(), graphRow0, graphRow1, graphRow2], className='container')
+app.layout = html.Div([html.Br(), graphRow0, graphRow1, graphRow2])
 
 
 @app.callback(
@@ -120,42 +120,38 @@ app.layout = html.Div([html.Br(), graphRow0, graphRow1, graphRow2], className='c
 )
 def make_graph(country):
     # minimal input validation, make sure there's at least one cluster
-    plot_data = df_jh[(df_jh['Country/Region'].isin(country)) & (df_jh.date > '03/10/2020')]
+    plot_data = df_jh[df_jh['Country/Region']==country]
     #fig2 = px.bar(plot_data, x='date', y='confirmed')
     country_fig = go.Figure()
-#     country_fig.add_trace(go.Scatter(x=plot_data.date,y=plot_data.confirmed,
-#                         mode='lines',
-#                         name='confirmed'))
-#     country_fig.add_trace(go.Scatter(x=plot_data.date, y=plot_data.sick,
-#                         mode='lines',
-#                         name='active'))
-#     country_fig.add_trace(go.Scatter(x=plot_data.date, y=plot_data.deaths,
-#                         mode='lines', name='deaths'))
-    #country_fig.add_trace(go.Bar(x=plot_data.date, y=plot_data.confirmed_diff, name='confirmed_diff', color=country))
-    for c in country:
-        pdata = plot_data[plot_data['Country/Region']==c]
-        country_fig.add_trace(go.Bar(x=pdata.date, y=pdata.confirmed_diff, name=c ))
+    country_fig.add_trace(go.Scatter(x=plot_data.date,y=plot_data.confirmed,
+                        mode='lines',
+                        name='confirmed'))
+    country_fig.add_trace(go.Scatter(x=plot_data.date, y=plot_data.sick,
+                        mode='lines',
+                        name='active'))
+    country_fig.add_trace(go.Scatter(x=plot_data.date, y=plot_data.deaths,
+                        mode='lines', name='deaths'))
     #country_fig.update_layout(config={"displayModeBar": False})
     return country_fig
 
 
 
-# @app.callback(
-#     [
-#     Output("table", "columns"),
-#     Output("table", "data"),
-#     Output("card_title_country", "children"),
-#     Output("country_flag", 'src')
-#     ],
-#     [
-#         Input('country', "value")
-#     ],
-# )
-# def update_country_data(country):
-#     table_data = df_jh[df_jh['Country/Region']==country].set_index('date').sort_index(ascending=False).head(10).reset_index()
-#     iso2 = table_data.ISO2.max()
-#     return [[{"name": i, "id": i} for i in table_data.columns],table_data.to_dict('records'), [country], "https://raw.githubusercontent.com/hjnilsson/country-flags/master/png100px/" + iso2.lower() + '.png']
-#     
+@app.callback(
+    [
+    Output("table", "columns"),
+    Output("table", "data"),
+    Output("card_title_country", "children"),
+    Output("country_flag", 'src')
+    ],
+    [
+        Input('country', "value")
+    ],
+)
+def update_country_data(country):
+    table_data = df_jh[df_jh['Country/Region']==country].set_index('date').sort_index(ascending=False).head(10).reset_index()
+    iso2 = table_data.ISO2.max()
+    return [[{"name": i, "id": i} for i in table_data.columns],table_data.to_dict('records'), [country], "https://raw.githubusercontent.com/hjnilsson/country-flags/master/png100px/" + iso2.lower() + '.png']
+    
 
 
 

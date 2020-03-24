@@ -36,17 +36,19 @@ class JHdata:
         df_cc[['ISO2', 'ISO3']] = df_cc['ISO CODES'].str.split(' / ', expand=True)
         df_covid19['country_key'] =df_covid19['Country/Region']
         df_covid19['country_key'] = df_covid19['country_key'].replace({'Mainland China':'China', 'US':'United States', 'UK':'United Kingdom', 'North Macedonia':'Macedonia', 'Others':np.nan})
+    
         # merge data
         df_covid19 = df_covid19.merge(df_cc, left_on='country_key', right_on='COUNTRY')
         
         
         df_covid_19_pivot = df_covid19.pivot_table(index=['Country/Region', 'ISO3', 'ISO2', 'date'], columns='type', values='cnt', aggfunc='sum').assign(sick=lambda x: x['confirmed'] - x['deaths'] - x['recovered']).reset_index()
+        df_covid_19_pivot['confirmed_diff'] = df_covid_19_pivot.groupby('Country/Region').confirmed.diff()
         return df_covid_19_pivot
     def get_last_update(self):
         return self.df.date.max()
     
     def get_countries(self):
-        return self.df[self.df['date']==self.get_last_update()].nlargest(20, 'confirmed')['Country/Region'].values
+        return self.df[self.df['date']==self.get_last_update()].sort_values(by='confirmed', ascending=False)['Country/Region'].values
     
     def get_current_world(self):
         return self.df.groupby('date').agg({'confirmed':'sum', 'deaths':'sum', 'recovered':'sum', 'sick':'sum'}).reset_index()
