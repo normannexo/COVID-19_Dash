@@ -17,6 +17,12 @@ import plotly
 import plotly.graph_objs as go
 import datautils
 
+
+external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css', dbc.themes.CERULEAN]
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+server = app.server
+
+
 jh = datautils.JHdata()
 print(jh.df[jh.df['Country/Region']=='Germany'][['date','confirmed']])
 
@@ -30,6 +36,16 @@ colors={
     'background':'#0e2f63'
     
     }
+
+gcolors=dict()
+
+####
+## plot layouts
+###
+
+plot_layout=go.Layout(
+         paper_bgcolor=colors['background'],plot_bgcolor=colors['background'], font={'color':colors['text']}
+    )
 
 
 ########
@@ -46,7 +62,7 @@ navbar = html.Div(
                 dbc.NavLink("Page 3", href="/page-3", id="page-3-link"),
             ],
             brand="Navbar with active links",
-            color="primary",
+            color=colors['background'],
             dark=True,
         ),
         dbc.Container(id="page-content", className="pt-4"),
@@ -61,7 +77,7 @@ world_fig.add_trace(go.Scatter(x=df_world.date,y=df_world.confirmed,
                     ))
 world_fig.add_trace(go.Scatter(x=df_world.date, y=df_world.deaths,
                     mode='lines', name='deaths'))
-world_fig.update_layout(title_text="World")
+world_fig.update_layout(title_text="World", paper_bgcolor=colors['background'],plot_bgcolor=colors['background'], font={'color':colors['text']})
 
 graph_world = dcc.Graph(
         id = "gWorld",
@@ -69,9 +85,6 @@ graph_world = dcc.Graph(
 )
 
 
-external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css', dbc.themes.CERULEAN]
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-server = app.server
 
 map_fig = px.choropleth(df_jh, locations="ISO3",
                     color="confirmed", # lifeExp is a column of gapminder
@@ -90,7 +103,7 @@ controls = html.Div(
                 
                 {'label':col, 'value':col} for col in jh.get_countries()
             ]
-            , id='country', value=['Germany'], multi=True
+            , id='country', value=['Germany'], multi=True, style={'background':colors ['background']}
         ),
 
 
@@ -144,11 +157,11 @@ graph_country_c = dcc.Graph(
 ### LAYOUT
 ##############
 
-graphRow0 = dbc.Row([dbc.Col(controls, md=2), dbc.Col(graph_country_c, md=5),dbc.Col(graph_country_cd, md=5 )])
-#graphRow1 = dbc.Row([dbc.Col(country_card, md=2), dbc.Col(graph_country, md=6)])
-graphRow2 = dbc.Row([dbc.Col(country_table, md = 8)])
+graphRow0 = dbc.Row([dbc.Col(graph_world, md=12)], style={'padding':'3em'})
+graphRow1 = dbc.Row([dbc.Col(controls, md=2), dbc.Col(graph_country_c, md=5),dbc.Col(graph_country_cd, md=5 )])
+#graphRow2 = dbc.Row([dbc.Col(country_table, md = 8)])
 
-app.layout = html.Div([navbar, html.Br(), graphRow0], className='container', style={'background':colors['background']})
+app.layout = html.Div([navbar, html.Br(), graphRow0, graphRow1], className='container', style={'background':colors['background'], 'padding':'2em'})
 
 #################
 #### CALBACKS###
@@ -166,7 +179,7 @@ def make_graph_cd(country):
     # minimal input validation, make sure there's at least one cluster
     plot_data = df_jh[(df_jh['Country/Region'].isin(country)) & (df_jh.date > '03/10/2020')]
     #fig2 = px.bar(plot_data, x='date', y='confirmed')
-    country_fig = go.Figure()
+    country_fig = go.Figure(layout=plot_layout)
 #     country_fig.add_trace(go.Scatter(x=plot_data.date,y=plot_data.confirmed,
 #                         mode='lines',
 #                         name='confirmed'))
@@ -179,7 +192,7 @@ def make_graph_cd(country):
     for c in country:
         pdata = plot_data[plot_data['Country/Region']==c]
         country_fig.add_trace(go.Bar(x=pdata.date, y=pdata.confirmed_diff, name=c ))
-    #country_fig.update_layout(config={"displayModeBar": False})
+    country_fig.update_layout(title_text="confirmed difference")
     return country_fig
 
 @app.callback(
@@ -192,7 +205,7 @@ def make_graph_c(country):
     # minimal input validation, make sure there's at least one cluster
     plot_data = df_jh[(df_jh['Country/Region'].isin(country)) & (df_jh.date > '03/10/2020')]
     #fig2 = px.bar(plot_data, x='date', y='confirmed')
-    country_fig = go.Figure()
+    country_fig = go.Figure(layout=plot_layout)
 #     country_fig.add_trace(go.Scatter(x=plot_data.date,y=plot_data.confirmed,
 #                         mode='lines',
 #                         name='confirmed'))
@@ -205,7 +218,7 @@ def make_graph_c(country):
     for c in country:
         pdata = plot_data[plot_data['Country/Region']==c]
         country_fig.add_trace(go.Bar(x=pdata.date, y=pdata.confirmed, name=c ))
-    #country_fig.update_layout(config={"displayModeBar": False})
+    country_fig.update_layout(title_text="confirmed")
     return country_fig
 
 
