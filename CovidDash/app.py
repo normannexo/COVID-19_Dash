@@ -18,9 +18,10 @@ import plotly
 import plotly.graph_objs as go
 import datautils
 
-
 external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css', dbc.themes.CERULEAN]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app.config['suppress_callback_exceptions'] = True
+
 server = app.server
 
 
@@ -36,8 +37,8 @@ print("last update: " + str(jh.get_last_update() -timedelta(days=10)))
 df_world = jh.get_current_world()
 
 colors={
-    "text":'#FFFFFF',
-    'background':'#0e2f63'
+    "text":'black',
+    'background': 'white'#'#0e2f63'
     
     }
 
@@ -61,21 +62,22 @@ navbar = html.Div(
         dcc.Location(id="url"),
         dbc.NavbarSimple(
             children=[
-                dbc.NavLink("Page 1", href="/page-1", id="page-1-link"),
-                dbc.NavLink("Page 2", href="/page-2", id="page-2-link"),
-                dbc.NavLink("Page 3", href="/page-3", id="page-3-link"),
+                dbc.NavLink("World", href="/johnshopkins", id="page-1-link"),
+                dbc.NavLink("Germany", href="/rki", id="page-2-link"),
+                dbc.NavLink("Italy", href="/page-3", id="page-3-link"),
             ],
-            brand="Navbar with active links",
-            color=colors['background'],
+            brand="COVID-19",
+            color='black',
             dark=True,
-        ),
-        dbc.Container(id="page-content", className="pt-4"),
+        )
     ]
 )
 
 #####
 ## Graphs
 #####
+
+# JH
 
 world_fig = go.Figure()
 world_fig.add_trace(go.Scatter(x=df_world.date,y=df_world.confirmed,
@@ -101,8 +103,39 @@ graph_map = dcc.Graph(
         figure=map_fig
     )
 
+# RKI
 
+germany_fig_df = rki.df.groupby(level=1).agg({'confirmed':'sum', 'deaths':'sum'}).reset_index()
+germany_fig = go.Figure()
+germany_fig.add_trace(go.Scatter(x=germany_fig_df.date,y=germany_fig_df.confirmed,
+                    mode='lines',
+                    name='confirmed'
+                    ))
+germany_fig.add_trace(go.Scatter(x=germany_fig_df.date, y=germany_fig_df.deaths,
+                    mode='lines', name='deaths'))
+germany_fig.update_layout(title_text="Germany", paper_bgcolor=colors['background'],plot_bgcolor=colors['background'], font={'color':colors['text']})
 
+graph_germany = dcc.Graph(
+        id = "gRKI_overall",
+        figure = germany_fig #px.line(df_world, x='date', y='confirmed')
+)
+
+germany_fig_new_df = rki.df.groupby(level=1).agg({'confirmed_diff':'sum', 'deaths':'sum'}).reset_index()
+germany_fig_new = go.Figure()
+germany_fig_new.add_trace(go.Bar(x=germany_fig_new_df.date,y=germany_fig_new_df.confirmed_diff,
+                    name='confirmed new'
+                    ))
+germany_fig_new.update_layout(paper_bgcolor=colors['background'],plot_bgcolor=colors['background'], font={'color':colors['text']})
+
+graph_germany = dcc.Graph(
+        id = "gRKI_overall",
+        figure = germany_fig #px.line(df_world, x='date', y='confirmed')
+)
+
+graph_germany_new = dcc.Graph(
+        id = "gRKI_overall_new",
+        figure = germany_fig_new
+)
 controls = html.Div(
     
     [
@@ -166,11 +199,19 @@ graph_country_c = dcc.Graph(
 ### LAYOUT
 ##############
 
+# JH
 graphRow0 = dbc.Row([dbc.Col(graph_world, md=12)], style={'padding':'3em'})
 graphRow1 = dbc.Row([dbc.Col(controls, md=2), dbc.Col(graph_country_c, md=5),dbc.Col(graph_country_cd, md=5 )])
+jh_layout = html.Div([html.Br(), graphRow0, graphRow1])
 #graphRow2 = dbc.Row([dbc.Col(country_table, md = 8)])
 
-app.layout = html.Div([navbar, html.Br(), graphRow0, graphRow1], className='container', style={'background':colors['background'], 'padding':'2em'})
+#RKI
+
+rki_row0 = dbc.Row([dbc.Col(graph_germany, md=12)], style={'padding':'3em'})
+rki_row1 = dbc.Row([dbc.Col(graph_germany_new, md=12)], style={'padding':'3em'})
+rki_layout = html.Div([html.Br(),rki_row0, rki_row1])
+
+app.layout = html.Div([navbar, dbc.Container(id="page-content", className="pt-4")], className='container', style={'background':colors['background'], 'padding':'2em'})
 
 #################
 #### CALBACKS###
@@ -201,7 +242,7 @@ def make_graph_cd(country):
     for c in country:
         pdata = plot_data[plot_data['Country/Region']==c]
         country_fig.add_trace(go.Bar(x=pdata.date, y=pdata.confirmed_diff, name=c ))
-    country_fig.update_layout(title_text="confirmed difference")
+    country_fig.update_layout(title_text="confirmed new")
     return country_fig
 
 @app.callback(
@@ -230,6 +271,25 @@ def make_graph_c(country):
     country_fig.update_layout(title_text="confirmed")
     return country_fig
 
+
+
+
+@app.callback(Output("page-content", "children"), [Input("url", "pathname")])
+def render_page_content(pathname):
+    if pathname in ["/", "/johnshopkins"]:
+        return jh_layout
+    elif pathname == "/rki":
+        return rki_layout
+    elif pathname == "/page-3":
+        return html.P("Oh cool, this is page 3!")
+    # If the user tries to reach a different page, return a 404 message
+    return dbc.Jumbotron(
+        [
+            html.H1("404: Not found", className="text-danger"),
+            html.Hr(),
+            html.P(f"The pathname {pathname} was not recognised..."),
+        ]
+    )
 
 
 # @app.callback(
