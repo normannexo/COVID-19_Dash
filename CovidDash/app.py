@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 from dash.dependencies import Input, Output, State
+from datetime import timedelta
 
 import plotly
 import plotly.graph_objs as go
@@ -26,9 +27,12 @@ server = app.server
 jh = datautils.JHdata()
 print(jh.df[jh.df['Country/Region']=='Germany'][['date','confirmed']])
 
+rki = datautils.RKIdata()
+print(rki.df)
+
 
 df_jh = jh.df
-print("last update: " + str(jh.get_last_update()))
+print("last update: " + str(jh.get_last_update() -timedelta(days=10)))
 df_world = jh.get_current_world()
 
 colors={
@@ -69,6 +73,9 @@ navbar = html.Div(
     ]
 )
 
+#####
+## Graphs
+#####
 
 world_fig = go.Figure()
 world_fig.add_trace(go.Scatter(x=df_world.date,y=df_world.confirmed,
@@ -93,6 +100,8 @@ map_fig = px.choropleth(df_jh, locations="ISO3",
 graph_map = dcc.Graph(
         figure=map_fig
     )
+
+
 
 controls = html.Div(
     
@@ -177,7 +186,7 @@ app.layout = html.Div([navbar, html.Br(), graphRow0, graphRow1], className='cont
 )
 def make_graph_cd(country):
     # minimal input validation, make sure there's at least one cluster
-    plot_data = df_jh[(df_jh['Country/Region'].isin(country)) & (df_jh.date > '03/10/2020')]
+    plot_data = df_jh[(df_jh['Country/Region'].isin(country)) & (df_jh.date > (jh.get_last_update() - timedelta(days=21)))]
     #fig2 = px.bar(plot_data, x='date', y='confirmed')
     country_fig = go.Figure(layout=plot_layout)
 #     country_fig.add_trace(go.Scatter(x=plot_data.date,y=plot_data.confirmed,
@@ -203,7 +212,7 @@ def make_graph_cd(country):
 )
 def make_graph_c(country):
     # minimal input validation, make sure there's at least one cluster
-    plot_data = df_jh[(df_jh['Country/Region'].isin(country)) & (df_jh.date > '03/10/2020')]
+    plot_data = df_jh[(df_jh['Country/Region'].isin(country)) & (df_jh.date > (jh.get_last_update() - timedelta(days=21)))]
     #fig2 = px.bar(plot_data, x='date', y='confirmed')
     country_fig = go.Figure(layout=plot_layout)
 #     country_fig.add_trace(go.Scatter(x=plot_data.date,y=plot_data.confirmed,

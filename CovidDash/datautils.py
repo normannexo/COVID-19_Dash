@@ -49,3 +49,19 @@ class JHdata:
     
     def get_current_world(self):
         return self.df.groupby('date').agg({'confirmed':'sum', 'deaths':'sum'}).reset_index()
+
+
+class RKIdata():
+    def __init__(self):
+        self.df = self.get_rki_df()
+    def get_rki_df(self):
+        df_rki = pd.read_csv("http://www.nexolin.de/data/covid-19/rki/rki_data.csv", parse_dates=['date'])
+        df_rki['days'] = df_rki.groupby(['Bundesland','date']).filter(lambda x: x['confirmed']>50).groupby('Bundesland').cumcount() + 1
+        df_rki['confirmed_diff'] = df_rki.groupby('Bundesland').confirmed.diff()
+        df_rki = df_rki.set_index(['Bundesland','date'])
+        return df_rki
+    def get_last_update(self):
+        return self.df.reset_index().date.max()
+
+
+    
