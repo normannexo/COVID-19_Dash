@@ -13,7 +13,7 @@ import pandas as pd
 import plotly.express as px
 from dash.dependencies import Input, Output, State
 from datetime import timedelta
-
+import math
 import plotly
 import plotly.graph_objs as go
 import datautils
@@ -187,13 +187,13 @@ graph_italy_new = dcc.Graph(
 controls_dd_country = html.Div(
     
     [
-        html.H4('Choose country:'),
+        html.H4('Choose countries:', style={'color':'black'}),
         dcc.Dropdown(
             options= [
                 
                 {'label':col, 'value':col} for col in jh.get_countries()
             ]
-            , id='country', value=['Germany', 'Italy', 'US'], multi=True, style={'background':colors ['background']}
+            , id='country', value=['Germany', 'Italy', 'US'], multi=True, style={'background':'white', 'color':'black'}
         ),
 
 
@@ -255,6 +255,13 @@ graph_country_c = dcc.Graph(
     }
 )
 
+graph_country_progress  = dcc.Graph(
+        id = "gCountry_p",
+        config={
+        'displayModeBar': False
+    }
+)
+
 ############
 ### LAYOUT
 ##############
@@ -264,9 +271,11 @@ graph_country_c = dcc.Graph(
 rows_jh_list = [
     dbc.Row([dbc.Col(graph_world, md=12)], style={'padding':'3em'}),
     dbc.Row([dbc.Col(table_world, md=12)]),
+    html.Br(),
     dbc.Row([dbc.Col(controls_dd_country, md=8)], justify='center'),
     dbc.Row(graph_country_c, justify='center'),
     dbc.Row(graph_country_cd , justify='center'),
+    dbc.Row(graph_country_progress , justify='center'),
     
     ]
 
@@ -334,6 +343,31 @@ def make_graph_c(country):
         pdata = plot_data[plot_data['Country/Region']==c]
         country_fig.add_trace(go.Bar(x=pdata.date, y=pdata.confirmed, name=c ))
     country_fig.update_layout(title_text="confirmed")
+    return country_fig
+
+
+@app.callback(
+    Output("gCountry_p", "figure"),
+    [
+        Input('country', "value")
+    ],
+)
+def make_graph_progress(country):
+    # minimal input validation, make sure there's at least one cluster
+    plot_data = df_jh[(df_jh['Country/Region'].isin(country))]
+    plot_data.loc[:,'days'] = plot_data.groupby(['Country/Region', 'date']).filter(lambda x: x['confirmed']>1000).groupby('Country/Region').cumcount() + 1
+    #fig2 = px.bar(plot_data, x='date', y='confirmed')
+    plot_data = plot_data.reset_index()
+    yrange = [1000, plot_data.confirmed.max()]
+    country_fig = go.Figure(layout=plot_layout)
+    for c in country:
+        pdata = plot_data[plot_data['Country/Region']==c]
+        country_fig.add_trace(go.Scatter(x=pdata.days, y=pdata.confirmed, name=c ,mode='lines+markers'))
+    country_fig.update_layout(title_text="Days since 1000 cases (log)", xaxis_title='days', yaxis_title='confirmed cases', yaxis_type="log",  yaxis = dict(
+        tick0 = 1000
+        )
+    )
+    country_fig.update_yaxes(range=[math.log10(x) for x in yrange])
     return country_fig
 
 
