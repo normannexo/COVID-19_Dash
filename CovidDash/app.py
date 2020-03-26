@@ -21,6 +21,7 @@ import datautils
 external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css', dbc.themes.CERULEAN]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.config['suppress_callback_exceptions'] = True
+app.title = "COVID-19 Dashboard"
 
 server = app.server
 
@@ -90,7 +91,7 @@ world_fig.add_trace(go.Scatter(x=df_world.date,y=df_world.confirmed,
                     name='confirmed'
                     ))
 world_fig.add_trace(go.Scatter(x=df_world.date, y=df_world.deaths,
-                    mode='lines', name='deaths'))
+                    mode='lines+markers', name='deaths'))
 world_fig.update_layout(title_text="World")
 
 graph_world = dcc.Graph(
@@ -113,7 +114,7 @@ graph_map = dcc.Graph(
 germany_fig_df = rki.df.groupby(level=1).agg({'confirmed':'sum', 'deaths':'sum'}).reset_index()
 germany_fig = go.Figure(layout=plot_layout)
 germany_fig.add_trace(go.Scatter(x=germany_fig_df.date,y=germany_fig_df.confirmed,
-                    mode='lines',
+                    mode='lines+markers',
                     name='confirmed'
                     ))
 germany_fig.add_trace(go.Scatter(x=germany_fig_df.date, y=germany_fig_df.deaths,
@@ -153,17 +154,30 @@ table_data = germany_fig_df = rki.df.groupby(level=1).agg({'confirmed':'sum', 'c
 italy_overall = it.df.loc[(it.get_last_update()-timedelta(days=28)):].reset_index()
 italy_fig = go.Figure(layout=plot_layout)
 italy_fig.add_trace(go.Scatter(x=italy_overall.date,y=italy_overall.confirmed,
-                    mode='lines',
+                    mode='lines+markers',
                     name='confirmed'
                     ))
 italy_fig.add_trace(go.Scatter(x=italy_overall.date, y=italy_overall.deaths,
-                    mode='lines', name='deaths'))
+                    mode='lines+markers', name='deaths'))
 italy_fig.update_layout(title_text="Italy")
 
 graph_italy = dcc.Graph(
         id = "gItaly",
         figure = italy_fig #px.line(df_world, x='date', y='confirmed')
 )
+
+
+italy_new_fig = go.Figure(layout=plot_layout)
+italy_new_fig.add_trace(go.Bar(x=italy_overall.date,y=italy_overall.confirmed_new,
+                    name='confirmed new'
+                    ))
+italy_new_fig.update_layout(title_text="Italy - confirmed new")
+
+graph_italy_new = dcc.Graph(
+        id = "gItalyNew",
+        figure = italy_new_fig
+)
+
 
 
 
@@ -271,7 +285,8 @@ rki_layout = html.Div(rows_rki_list)
 ### Italy
 
 rows_italy_list = [
-    dbc.Row([dbc.Col(graph_italy)])
+    dbc.Row([dbc.Col(graph_italy)]),
+    dbc.Row([dbc.Col(graph_italy_new)])
     ]
 
 italy_layout = html.Div(rows_italy_list)
@@ -298,15 +313,6 @@ def make_graph_cd(country):
     plot_data = df_jh[(df_jh['Country/Region'].isin(country)) & (df_jh.date > (jh.get_last_update() - timedelta(days=21)))]
     #fig2 = px.bar(plot_data, x='date', y='confirmed')
     country_fig = go.Figure(layout=plot_layout)
-#     country_fig.add_trace(go.Scatter(x=plot_data.date,y=plot_data.confirmed,
-#                         mode='lines',
-#                         name='confirmed'))
-#     country_fig.add_trace(go.Scatter(x=plot_data.date, y=plot_data.sick,
-#                         mode='lines',
-#                         name='active'))
-#     country_fig.add_trace(go.Scatter(x=plot_data.date, y=plot_data.deaths,
-#                         mode='lines', name='deaths'))
-    #country_fig.add_trace(go.Bar(x=plot_data.date, y=plot_data.confirmed_diff, name='confirmed_diff', color=country))
     for c in country:
         pdata = plot_data[plot_data['Country/Region']==c]
         country_fig.add_trace(go.Bar(x=pdata.date, y=pdata.confirmed_diff, name=c ))
@@ -324,15 +330,6 @@ def make_graph_c(country):
     plot_data = df_jh[(df_jh['Country/Region'].isin(country)) & (df_jh.date > (jh.get_last_update() - timedelta(days=21)))]
     #fig2 = px.bar(plot_data, x='date', y='confirmed')
     country_fig = go.Figure(layout=plot_layout)
-#     country_fig.add_trace(go.Scatter(x=plot_data.date,y=plot_data.confirmed,
-#                         mode='lines',
-#                         name='confirmed'))
-#     country_fig.add_trace(go.Scatter(x=plot_data.date, y=plot_data.sick,
-#                         mode='lines',
-#                         name='active'))
-#     country_fig.add_trace(go.Scatter(x=plot_data.date, y=plot_data.deaths,
-#                         mode='lines', name='deaths'))
-    #country_fig.add_trace(go.Bar(x=plot_data.date, y=plot_data.confirmed_diff, name='confirmed_diff', color=country))
     for c in country:
         pdata = plot_data[plot_data['Country/Region']==c]
         country_fig.add_trace(go.Bar(x=pdata.date, y=pdata.confirmed, name=c ))
