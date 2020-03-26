@@ -26,14 +26,14 @@ server = app.server
 
 
 jh = datautils.JHdata()
-print(jh.df[jh.df['Country/Region']=='Germany'][['date','confirmed']])
+#print(jh.df[jh.df['Country/Region']=='Germany'][['date','confirmed']])
 
 rki = datautils.RKIdata()
-print(rki.df)
+#print(rki.df)
 
 
 df_jh = jh.df
-print("last update: " + str(jh.get_last_update() -timedelta(days=10)))
+#print("last update: " + str(jh.get_last_update() -timedelta(days=10)))
 df_world = jh.get_current_world()
 
 colors={
@@ -135,8 +135,18 @@ graph_germany = dcc.Graph(
 graph_germany_new = dcc.Graph(
         id = "gRKI_overall_new",
         figure = germany_fig_new
+        
+    
 )
-controls = html.Div(
+
+table_data = germany_fig_df = rki.df.groupby(level=1).agg({'confirmed':'sum', 'confirmed_diff':'sum', 'deaths':'sum'}).reset_index()
+
+
+
+####
+### Controls
+#####
+controls_dd_country = html.Div(
     
     [
         html.H4('Choose country:'),
@@ -171,12 +181,24 @@ country_card = dbc.Card(
     style={"width": "18rem"},
 )
 
+#############
+### TABLE
+#############
 
 
-country_table = dash_table.DataTable(
-    id='table',
-    #columns=[{"name": i, "id": i} for i in df.columns],
-    #data=df.to_dict('records')
+table_world_data =  jh.df.groupby('date').agg({'confirmed':'sum', 'confirmed_diff':'sum', 'deaths':'sum'}).reset_index().nlargest(3,'date')
+table_world_data['date'] = table_world_data['date'].dt.strftime('%Y/%m/%d')
+table_world_data.columns= ['date', 'confirmed', 'confirmed new', 'deaths']
+print(table_world_data.to_dict('records'))
+table_world = dash_table.DataTable(
+    id='world_table',
+    columns=[{"name": i, "id": i} for i in table_world_data.columns],
+    data= table_world_data.to_dict('records'),
+    style_cell = {
+                'font_family': 'Arial',
+                'font_size': '1.4em',
+                'text_align': 'center'
+            },
 )
 
 
@@ -201,8 +223,11 @@ graph_country_c = dcc.Graph(
 
 # JH
 graphRow0 = dbc.Row([dbc.Col(graph_world, md=12)], style={'padding':'3em'})
-graphRow1 = dbc.Row([dbc.Col(controls, md=2), dbc.Col([dbc.Row(graph_country_c),dbc.Row(graph_country_cd )],md=10)])
-jh_layout = html.Div([html.Br(), graphRow0, graphRow1])
+graphRow1= dbc.Row([dbc.Col(table_world, md=12)])
+graphRow2 = dbc.Row([dbc.Col(controls_dd_country, md=8)], justify='center')
+graphRow3 = dbc.Row(graph_country_c, justify='center')
+graphRow4 = dbc.Row(graph_country_cd , justify='center')
+jh_layout = html.Div([html.Br(), graphRow0, graphRow1,graphRow2, graphRow3, graphRow4])
 #graphRow2 = dbc.Row([dbc.Col(country_table, md = 8)])
 
 #RKI
