@@ -24,12 +24,17 @@ app.config['suppress_callback_exceptions'] = True
 
 server = app.server
 
+### 
+## GET DATA
+######
 
 jh = datautils.JHdata()
 #print(jh.df[jh.df['Country/Region']=='Germany'][['date','confirmed']])
 
 rki = datautils.RKIdata()
 #print(rki.df)
+
+it = datautils.Italydata()
 
 
 df_jh = jh.df
@@ -64,7 +69,7 @@ navbar = html.Div(
             children=[
                 dbc.NavLink("World", href="/johnshopkins", id="page-1-link"),
                 dbc.NavLink("Germany", href="/rki", id="page-2-link"),
-                dbc.NavLink("Italy", href="/page-3", id="page-3-link"),
+                dbc.NavLink("Italy", href="/italy", id="page-3-link"),
             ],
             brand="COVID-19",
             color='black',
@@ -74,7 +79,7 @@ navbar = html.Div(
 )
 
 #####
-## Graphs
+## Graphs and Tables
 #####
 
 # JH
@@ -140,6 +145,25 @@ graph_germany_new = dcc.Graph(
 )
 
 table_data = germany_fig_df = rki.df.groupby(level=1).agg({'confirmed':'sum', 'confirmed_diff':'sum', 'deaths':'sum'}).reset_index()
+
+
+#####
+### Italy - Graphs and Tables
+#### 
+italy_overall = it.df.loc[(it.get_last_update()-timedelta(days=28)):].reset_index()
+italy_fig = go.Figure(layout=plot_layout)
+italy_fig.add_trace(go.Scatter(x=italy_overall.date,y=italy_overall.confirmed,
+                    mode='lines',
+                    name='confirmed'
+                    ))
+italy_fig.add_trace(go.Scatter(x=italy_overall.date, y=italy_overall.deaths,
+                    mode='lines', name='deaths'))
+italy_fig.update_layout(title_text="Italy")
+
+graph_italy = dcc.Graph(
+        id = "gItaly",
+        figure = italy_fig #px.line(df_world, x='date', y='confirmed')
+)
 
 
 
@@ -222,19 +246,38 @@ graph_country_c = dcc.Graph(
 ##############
 
 # JH
-graphRow0 = dbc.Row([dbc.Col(graph_world, md=12)], style={'padding':'3em'})
-graphRow1= dbc.Row([dbc.Col(table_world, md=12)])
-graphRow2 = dbc.Row([dbc.Col(controls_dd_country, md=8)], justify='center')
-graphRow3 = dbc.Row(graph_country_c, justify='center')
-graphRow4 = dbc.Row(graph_country_cd , justify='center')
-jh_layout = html.Div([html.Br(), graphRow0, graphRow1,graphRow2, graphRow3, graphRow4])
+
+rows_jh_list = [
+    dbc.Row([dbc.Col(graph_world, md=12)], style={'padding':'3em'}),
+    dbc.Row([dbc.Col(table_world, md=12)]),
+    dbc.Row([dbc.Col(controls_dd_country, md=8)], justify='center'),
+    dbc.Row(graph_country_c, justify='center'),
+    dbc.Row(graph_country_cd , justify='center'),
+    
+    ]
+
+jh_layout = html.Div(rows_jh_list)
 #graphRow2 = dbc.Row([dbc.Col(country_table, md = 8)])
 
 #RKI
 
-rki_row0 = dbc.Row([dbc.Col(graph_germany, md=12)], style={'padding':'3em'})
-rki_row1 = dbc.Row([dbc.Col(graph_germany_new, md=12)], style={'padding':'3em'})
-rki_layout = html.Div([html.Br(),rki_row0, rki_row1])
+rows_rki_list = [
+    dbc.Row([dbc.Col(graph_germany, md=12)], style={'padding':'3em'}),
+    dbc.Row([dbc.Col(graph_germany_new, md=12)], style={'padding':'3em'})
+
+    ]
+rki_layout = html.Div(rows_rki_list)
+
+### Italy
+
+rows_italy_list = [
+    dbc.Row([dbc.Col(graph_italy)])
+    ]
+
+italy_layout = html.Div(rows_italy_list)
+######################
+### MAIN LAYOUT #####
+######################
 
 app.layout = html.Div([navbar, dbc.Container(id="page-content", className="pt-4")], className='container', style={'background':colors['background'], 'padding':'2em'})
 
@@ -305,8 +348,8 @@ def render_page_content(pathname):
         return jh_layout
     elif pathname == "/rki":
         return rki_layout
-    elif pathname == "/page-3":
-        return html.P("Oh cool, this is page 3!")
+    elif pathname == "/italy":
+        return italy_layout
     # If the user tries to reach a different page, return a 404 message
     return dbc.Jumbotron(
         [

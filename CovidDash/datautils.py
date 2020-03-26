@@ -79,4 +79,27 @@ class RKIdata():
         return self.df.reset_index().date.max()
 
 
+class Italydata():
+    def __init__(self):
+        self.df = self.get_df()
+    def get_df(self):
+        df_italy = pd.read_csv('https://github.com/pcm-dpc/COVID-19/raw/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale.csv')
+        df_italy = df_italy.rename(columns={'data':'date', 'stato':'country', 'ricoverati_con_sintomi':'hospitalized', 'terapia_intensiva':'ICU',
+                         'totale_ospedalizzati':'hospitalized_total',
+                         'isolamento_domiciliare':'home_confinement',
+                         'totale_attualmente_positivi':'confirmed_active',
+                         'nuovi_attualmente_positivi':'confirmed_new',
+                         'dimessi_guariti':'recovered',
+                         'deceduti':'deaths',
+                         'totale_casi':'confirmed',
+                         'tamponi':'tests'
+                        })
+        df_italy['date'] = pd.to_datetime(df_italy.date)
+        df_italy = df_italy.set_index('date')
+        return df_italy
+    
+    def get_last_update(self):
+        return self.df.reset_index().date.max()
+        
+        
     
