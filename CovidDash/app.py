@@ -79,14 +79,14 @@ navbar = html.Div(
 
 # JH
 
-world_fig = go.Figure()
+world_fig = go.Figure(layout=plot_layout)
 world_fig.add_trace(go.Scatter(x=df_world.date,y=df_world.confirmed,
                     mode='lines',
                     name='confirmed'
                     ))
 world_fig.add_trace(go.Scatter(x=df_world.date, y=df_world.deaths,
                     mode='lines', name='deaths'))
-world_fig.update_layout(title_text="World", paper_bgcolor=colors['background'],plot_bgcolor=colors['background'], font={'color':colors['text']})
+world_fig.update_layout(title_text="World")
 
 graph_world = dcc.Graph(
         id = "gWorld",
@@ -106,14 +106,14 @@ graph_map = dcc.Graph(
 # RKI
 
 germany_fig_df = rki.df.groupby(level=1).agg({'confirmed':'sum', 'deaths':'sum'}).reset_index()
-germany_fig = go.Figure()
+germany_fig = go.Figure(layout=plot_layout)
 germany_fig.add_trace(go.Scatter(x=germany_fig_df.date,y=germany_fig_df.confirmed,
                     mode='lines',
                     name='confirmed'
                     ))
 germany_fig.add_trace(go.Scatter(x=germany_fig_df.date, y=germany_fig_df.deaths,
                     mode='lines', name='deaths'))
-germany_fig.update_layout(title_text="Germany", paper_bgcolor=colors['background'],plot_bgcolor=colors['background'], font={'color':colors['text']})
+germany_fig.update_layout(title_text="Germany")
 
 graph_germany = dcc.Graph(
         id = "gRKI_overall",
@@ -121,7 +121,7 @@ graph_germany = dcc.Graph(
 )
 
 germany_fig_new_df = rki.df.groupby(level=1).agg({'confirmed_diff':'sum', 'deaths':'sum'}).reset_index()
-germany_fig_new = go.Figure()
+germany_fig_new = go.Figure(layout=plot_layout)
 germany_fig_new.add_trace(go.Bar(x=germany_fig_new_df.date,y=germany_fig_new_df.confirmed_diff,
                     name='confirmed new'
                     ))
