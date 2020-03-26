@@ -155,7 +155,7 @@ controls_dd_country = html.Div(
                 
                 {'label':col, 'value':col} for col in jh.get_countries()
             ]
-            , id='country', value=['Germany'], multi=True, style={'background':colors ['background']}
+            , id='country', value=['Germany', 'Italy', 'US'], multi=True, style={'background':colors ['background']}
         ),
 
 
