@@ -11,7 +11,7 @@ class JHdata:
 
     def get_johnshopkins_df(self):
         df_confirmed_raw = pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv')
-        df_deaths_raw = pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Deaths.csv')
+        df_deaths_raw = pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv')
         #df_recovered_raw = pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv')
         df_confirmed_raw.rename(columns={'3/21/202':'3/21/20'}, inplace=True)
         
@@ -33,13 +33,27 @@ class JHdata:
         df_cc = pd.read_html(str(code_table))[0]
         df_cc[['ISO2', 'ISO3']] = df_cc['ISO CODES'].str.split(' / ', expand=True)
         df_covid19['country_key'] =df_covid19['Country/Region']
-        df_covid19['country_key'] = df_covid19['country_key'].replace({'Mainland China':'China', 'US':'United States', 'UK':'United Kingdom', 'Korea, South':'South Korea','North Macedonia':'Macedonia', 'Others':np.nan})
+        # fix deviant country spellings:
+        dict_replace=({'Mainland China':'China', 
+                       'US':'United States',
+                        'UK':'United Kingdom',
+                         'Korea, South':'South Korea',
+                         'North Macedonia':'Macedonia', 
+                         'Others':np.nan, 
+                         'Taiwan*':'Taiwan',
+                         'Cabo Verde':'Cape Verde',
+                         r"Cote d'Ivoire":'Ivory Coast',
+                         'Czechia':'Czech Republic',
+                         
+                       
+                       })
+        df_covid19['country_key'] = df_covid19['country_key'].replace(dict_replace)
     
         # merge data
-        df_covid19 = df_covid19.merge(df_cc, left_on='country_key', right_on='COUNTRY')
+        df_covid19 = df_covid19.merge(df_cc, left_on='country_key', right_on='COUNTRY', how='left')
         
         
-        df_covid_19_pivot = df_covid19.pivot_table(index=['Country/Region', 'ISO3', 'ISO2', 'date'], columns='type', values='cnt', aggfunc='sum').reset_index()
+        df_covid_19_pivot = df_covid19.pivot_table(index=['Country/Region', 'date'], columns='type', values='cnt', aggfunc='sum').reset_index()
         df_covid_19_pivot['confirmed_diff'] = df_covid_19_pivot.groupby('Country/Region').confirmed.diff()
         return df_covid_19_pivot
     def get_last_update(self):

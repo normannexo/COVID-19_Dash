@@ -95,9 +95,9 @@ graph_world = dcc.Graph(
 
 
 
-map_fig = px.choropleth(df_jh, locations="ISO3",
+map_fig = px.choropleth(df_jh, locations="Country/Region",
                     color="confirmed", # lifeExp is a column of gapminder
-                    hover_name="ISO3", # column to add to hover information
+                    hover_name="Country/Region", # column to add to hover information
                     color_continuous_scale=px.colors.sequential.Viridis)
 graph_map = dcc.Graph(
         figure=map_fig
@@ -201,7 +201,7 @@ graph_country_c = dcc.Graph(
 
 # JH
 graphRow0 = dbc.Row([dbc.Col(graph_world, md=12)], style={'padding':'3em'})
-graphRow1 = dbc.Row([dbc.Col(controls, md=2), dbc.Col(graph_country_c, md=5),dbc.Col(graph_country_cd, md=5 )])
+graphRow1 = dbc.Row([dbc.Col(controls, md=2), dbc.Col([dbc.Row(graph_country_c),dbc.Row(graph_country_cd )],md=10)])
 jh_layout = html.Div([html.Br(), graphRow0, graphRow1])
 #graphRow2 = dbc.Row([dbc.Col(country_table, md = 8)])
 
