@@ -49,7 +49,7 @@ gcolors=dict()
 ###
 
 plot_layout=go.Layout(
-         paper_bgcolor=colors['background'],plot_bgcolor=colors['background'], font={'color':colors['text']},yaxis={'title': 'y-axis','fixedrange':True},xaxis={'title': 'x-axis','fixedrange':True}
+         paper_bgcolor=colors['background'],plot_bgcolor=colors['background'], font={'color':colors['text']},yaxis={'title': 'y-axis','fixedrange':True},xaxis={'title': 'x-axis','fixedrange':True}, dragmode=False
     )
 
 
