@@ -17,13 +17,29 @@ import math
 import plotly
 import plotly.graph_objs as go
 import datautils
+from flask_caching import Cache
 
 external_stylesheets=['https://codepen.io/chriddyp/pen/bWLwgP.css', dbc.themes.CERULEAN]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.config['suppress_callback_exceptions'] = True
 app.title = "COVID-19 Dashboard"
-
+cache = Cache(app.server, config={
+    'CACHE_TYPE': 'filesystem',
+    'CACHE_DIR': 'cache-directory'
+})
 server = app.server
+
+
+TIMEOUT = 60*60
+
+jh = datautils.JHdata()
+
+@cache.memoize(timeout=TIMEOUT)
+def init_jh():
+    # This could be an expensive data querying step
+    jh = datautils.JHdata()
+    return jh
+
 
 ### 
 ## GET DATA
@@ -38,9 +54,6 @@ rki = datautils.RKIdata()
 it = datautils.Italydata()
 
 
-df_jh = jh.df
-#print("last update: " + str(jh.get_last_update() -timedelta(days=10)))
-df_world = jh.get_current_world()
 
 colors={
     "text":'black',
@@ -85,29 +98,14 @@ navbar = html.Div(
 
 # JH
 
-world_fig = go.Figure(layout=plot_layout)
-world_fig.add_trace(go.Scatter(x=df_world.date,y=df_world.confirmed,
-                    mode='lines',
-                    name='confirmed'
-                    ))
-world_fig.add_trace(go.Scatter(x=df_world.date, y=df_world.deaths,
-                    mode='lines+markers', name='deaths'))
-world_fig.update_layout(title_text="World")
+
 
 graph_world = dcc.Graph(
         id = "gWorld",
-        figure = world_fig #px.line(df_world, x='date', y='confirmed')
 )
 
 
 
-map_fig = px.choropleth(df_jh, locations="Country/Region",
-                    color="confirmed", # lifeExp is a column of gapminder
-                    hover_name="Country/Region", # column to add to hover information
-                    color_continuous_scale=px.colors.sequential.Viridis)
-graph_map = dcc.Graph(
-        figure=map_fig
-    )
 
 # RKI
 
@@ -303,7 +301,12 @@ italy_layout = html.Div(rows_italy_list)
 ### MAIN LAYOUT #####
 ######################
 
-app.layout = html.Div([navbar, dbc.Container(id="page-content", className="pt-4")], className='container', style={'background':colors['background'], 'padding':'2em'})
+def serve_layout():
+    jh.update_df()
+    return html.Div([navbar, dbc.Container(id="page-content", className="pt-4")], className='container', style={'background':colors['background'], 'padding':'2em'})
+
+app.layout = serve_layout
+
 
 #################
 #### CALBACKS###
@@ -312,21 +315,32 @@ app.layout = html.Div([navbar, dbc.Container(id="page-content", className="pt-4"
 
 
 @app.callback(
-    Output("gCountry_cd", "figure"),
+    [Output("gCountry_cd", "figure"),Output("gWorld", "figure")],
     [
         Input('country', "value")
     ],
 )
 def make_graph_cd(country):
     # minimal input validation, make sure there's at least one cluster
-    plot_data = df_jh[(df_jh['Country/Region'].isin(country)) & (df_jh.date > (jh.get_last_update() - timedelta(days=21)))]
+    jht = init_jh()
+    plot_data = jht.df[(jht.df['Country/Region'].isin(country)) & (jht.df.date > (jht.get_last_update() - timedelta(days=21)))]
     #fig2 = px.bar(plot_data, x='date', y='confirmed')
     country_fig = go.Figure(layout=plot_layout)
     for c in country:
         pdata = plot_data[plot_data['Country/Region']==c]
         country_fig.add_trace(go.Bar(x=pdata.date, y=pdata.confirmed_diff, name=c ))
     country_fig.update_layout(title_text="confirmed new")
-    return country_fig
+    df_world = jht.get_current_world()
+    world_fig = go.Figure(layout=plot_layout)
+    world_fig.add_trace(go.Scatter(x=df_world.date,y=df_world.confirmed,
+                        mode='lines',
+                        name='confirmed'
+                        ))
+    world_fig.add_trace(go.Scatter(x=df_world.date, y=df_world.deaths,
+                        mode='lines+markers', name='deaths'))
+    world_fig.update_layout(title_text="World")
+
+    return country_fig, world_fig
 
 @app.callback(
     Output("gCountry_c", "figure"),
@@ -335,9 +349,8 @@ def make_graph_cd(country):
     ],
 )
 def make_graph_c(country):
-    # minimal input validation, make sure there's at least one cluster
-    plot_data = df_jh[(df_jh['Country/Region'].isin(country)) & (df_jh.date > (jh.get_last_update() - timedelta(days=21)))]
-    #fig2 = px.bar(plot_data, x='date', y='confirmed')
+    jht = init_jh()
+    plot_data = jht.df[(jht.df['Country/Region'].isin(country)) & (jht.df.date > (jht.get_last_update() - timedelta(days=21)))]
     country_fig = go.Figure(layout=plot_layout)
     for c in country:
         pdata = plot_data[plot_data['Country/Region']==c]
@@ -353,8 +366,8 @@ def make_graph_c(country):
     ],
 )
 def make_graph_progress(country):
-    # minimal input validation, make sure there's at least one cluster
-    plot_data = df_jh[(df_jh['Country/Region'].isin(country))]
+    jht = init_jh()
+    plot_data = jht.df[(jht.df['Country/Region'].isin(country))]
     plot_data.loc[:,'days'] = plot_data.groupby(['Country/Region', 'date']).filter(lambda x: x['confirmed']>1000).groupby('Country/Region').cumcount() + 1
     #fig2 = px.bar(plot_data, x='date', y='confirmed')
     plot_data = plot_data.reset_index()
