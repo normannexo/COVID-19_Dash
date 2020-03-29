@@ -36,9 +36,12 @@ jh = datautils.JHdata()
 
 @cache.memoize(timeout=TIMEOUT)
 def init_jh():
-    # This could be an expensive data querying step
     jh = datautils.JHdata()
     return jh
+
+@cache.memoize(timeout=TIMEOUT)
+def init_rki():
+    return  datautils.RKIdata()
 
 
 ### 
@@ -109,39 +112,39 @@ graph_world = dcc.Graph(
 
 # RKI
 
-germany_fig_df = rki.df.groupby(level=1).agg({'confirmed':'sum', 'deaths':'sum'}).reset_index()
-germany_fig = go.Figure(layout=plot_layout)
-germany_fig.add_trace(go.Scatter(x=germany_fig_df.date,y=germany_fig_df.confirmed,
-                    mode='lines+markers',
-                    name='confirmed'
-                    ))
-germany_fig.add_trace(go.Scatter(x=germany_fig_df.date, y=germany_fig_df.deaths,
-                    mode='lines', name='deaths'))
-germany_fig.update_layout(title_text="Germany")
-
-graph_germany = dcc.Graph(
-        id = "gRKI_overall",
-        figure = germany_fig #px.line(df_world, x='date', y='confirmed')
-)
-
-germany_fig_new_df = rki.df.groupby(level=1).agg({'confirmed_diff':'sum', 'deaths':'sum'}).reset_index()
-germany_fig_new = go.Figure(layout=plot_layout)
-germany_fig_new.add_trace(go.Bar(x=germany_fig_new_df.date,y=germany_fig_new_df.confirmed_diff,
-                    name='confirmed new'
-                    ))
-germany_fig_new.update_layout(paper_bgcolor=colors['background'],plot_bgcolor=colors['background'], font={'color':colors['text']})
-
-graph_germany = dcc.Graph(
-        id = "gRKI_overall",
-        figure = germany_fig #px.line(df_world, x='date', y='confirmed')
-)
-
-graph_germany_new = dcc.Graph(
-        id = "gRKI_overall_new",
-        figure = germany_fig_new
+def get_germany_graphs():
+    rki = init_rki()
+    germany_fig_df = rki.df.groupby(level=1).agg({'confirmed':'sum', 'deaths':'sum'}).reset_index()
+    germany_fig = go.Figure(layout=plot_layout)
+    germany_fig.add_trace(go.Scatter(x=germany_fig_df.date,y=germany_fig_df.confirmed,
+                        mode='lines+markers',
+                        name='confirmed'
+                        ))
+    germany_fig.add_trace(go.Scatter(x=germany_fig_df.date, y=germany_fig_df.deaths,
+                        mode='lines', name='deaths'))
+    germany_fig.update_layout(title_text="Germany")
+    
+    graph_germany = dcc.Graph(
+            id = "gRKI_overall",
+            figure = germany_fig #px.line(df_world, x='date', y='confirmed')
+    )
+    
+    germany_fig_new_df = rki.df.groupby(level=1).agg({'confirmed_diff':'sum', 'deaths':'sum'}).reset_index()
+    germany_fig_new = go.Figure(layout=plot_layout)
+    germany_fig_new.add_trace(go.Bar(x=germany_fig_new_df.date,y=germany_fig_new_df.confirmed_diff,
+                        name='confirmed new'
+                        ))
+    germany_fig_new.update_layout(paper_bgcolor=colors['background'],plot_bgcolor=colors['background'], font={'color':colors['text']})
+    
+    graph_germany_new = dcc.Graph(
+            id = "gRKI_overall_new",
+            figure = germany_fig_new
+    )
         
     
-)
+    return graph_germany, graph_germany_new
+
+
 
 #table_data = germany_fig_df = rki.df.groupby(level=1).agg({'confirmed':'sum', 'confirmed_diff':'sum', 'deaths':'sum'}).reset_index()
 
@@ -273,12 +276,16 @@ jh_layout = html.Div(rows_jh_list)
 
 #RKI
 
-rows_rki_list = [
-    dbc.Row([dbc.Col(graph_germany, md=12)], style={'padding':'3em'}),
-    dbc.Row([dbc.Col(graph_germany_new, md=12)], style={'padding':'3em'})
 
+
+
+def get_rki_layout():
+    graph_c, graph_cn = get_germany_graphs()
+    rows_rki_list = [
+        dbc.Row([dbc.Col(graph_c, md=12)], style={'padding':'3em'}),
+        dbc.Row([dbc.Col(graph_cn, md=12)], style={'padding':'3em'})
     ]
-rki_layout = html.Div(rows_rki_list)
+    return html.Div(rows_rki_list)
 
 ### Italy
 
@@ -293,7 +300,6 @@ italy_layout = html.Div(rows_italy_list)
 ######################
 
 def serve_layout():
-    jh.update_df()
     return html.Div([navbar, dbc.Container(id="page-content", className="pt-4")], className='container', style={'background':colors['background'], 'padding':'2em'})
 
 app.layout = serve_layout
@@ -374,77 +380,7 @@ def make_graph_jh(country):
     
     return country_fig, country_c_fig, country_pg_fig, world_fig, ddoptions,table_world_data.to_dict('records'), table_columns
 
-
-# @app.callback(
-#     [Output("gCountry_cd", "figure"),Output("gWorld", "figure")],
-#     [
-#         Input('country', "value")
-#     ],
-# )
-# def make_graph_cd(country):
-#     # minimal input validation, make sure there's at least one cluster
-#     jht = init_jh()
-#     plot_data = jht.df[(jht.df['Country/Region'].isin(country)) & (jht.df.date > (jht.get_last_update() - timedelta(days=21)))]
-#     #fig2 = px.bar(plot_data, x='date', y='confirmed')
-#     country_fig = go.Figure(layout=plot_layout)
-#     for c in country:
-#         pdata = plot_data[plot_data['Country/Region']==c]
-#         country_fig.add_trace(go.Bar(x=pdata.date, y=pdata.confirmed_diff, name=c ))
-#     country_fig.update_layout(title_text="confirmed new")
-#     df_world = jht.get_current_world()
-#     world_fig = go.Figure(layout=plot_layout)
-#     world_fig.add_trace(go.Scatter(x=df_world.date,y=df_world.confirmed,
-#                         mode='lines',
-#                         name='confirmed'
-#                         ))
-#     world_fig.add_trace(go.Scatter(x=df_world.date, y=df_world.deaths,
-#                         mode='lines+markers', name='deaths'))
-#     world_fig.update_layout(title_text="World")
-# 
-#     return country_fig, world_fig
-# 
-# @app.callback(
-#     Output("gCountry_c", "figure"),
-#     [
-#         Input('country', "value")
-#     ],
-# )
-# def make_graph_c(country):
-#     jht = init_jh()
-#     plot_data = jht.df[(jht.df['Country/Region'].isin(country)) & (jht.df.date > (jht.get_last_update() - timedelta(days=21)))]
-#     country_fig = go.Figure(layout=plot_layout)
-#     for c in country:
-#         pdata = plot_data[plot_data['Country/Region']==c]
-#         country_fig.add_trace(go.Bar(x=pdata.date, y=pdata.confirmed, name=c ))
-#     country_fig.update_layout(title_text="confirmed")
-#     return country_fig
-# 
-# 
-# @app.callback(
-#     Output("gCountry_p", "figure"),
-#     [
-#         Input('country', "value")
-#     ],
-# )
-# def make_graph_progress(country):
-#     jht = init_jh()
-#     plot_data = jht.df[(jht.df['Country/Region'].isin(country))]
-#     plot_data.loc[:,'days'] = plot_data.groupby(['Country/Region', 'date']).filter(lambda x: x['confirmed']>1000).groupby('Country/Region').cumcount() + 1
-#     #fig2 = px.bar(plot_data, x='date', y='confirmed')
-#     plot_data = plot_data.reset_index()
-#     yrange = [1000, plot_data.confirmed.max()]
-#     country_fig = go.Figure(layout=plot_layout)
-#     for c in country:
-#         pdata = plot_data[plot_data['Country/Region']==c]
-#         country_fig.add_trace(go.Scatter(x=pdata.days, y=pdata.confirmed, name=c ,mode='lines+markers'))
-#     country_fig.update_layout(title_text="Days since 1000 cases (log)", xaxis_title='days', yaxis_title='confirmed cases', yaxis_type="log",  yaxis = dict(
-#         tick0 = 1000
-#         )
-#     )
-#     country_fig.update_yaxes(range=[math.log10(x) for x in yrange])
-#     return country_fig
-
-
+   
 
 
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
@@ -452,7 +388,7 @@ def render_page_content(pathname):
     if pathname in ["/", "/johnshopkins"]:
         return jh_layout
     elif pathname == "/rki":
-        return rki_layout
+        return get_rki_layout()
     elif pathname == "/italy":
         return italy_layout
     # If the user tries to reach a different page, return a 404 message
@@ -463,24 +399,6 @@ def render_page_content(pathname):
             html.P(f"The pathname {pathname} was not recognised..."),
         ]
     )
-
-
-# @app.callback(
-#     [
-#     Output("table", "columns"),
-#     Output("table", "data"),
-#     Output("card_title_country", "children"),
-#     Output("country_flag", 'src')
-#     ],
-#     [
-#         Input('country', "value")
-#     ],
-# )
-# def update_country_data(country):
-#     table_data = df_jh[df_jh['Country/Region']==country].set_index('date').sort_index(ascending=False).head(10).reset_index()
-#     iso2 = table_data.ISO2.max()
-#     return [[{"name": i, "id": i} for i in table_data.columns],table_data.to_dict('records'), [country], "https://raw.githubusercontent.com/hjnilsson/country-flags/master/png100px/" + iso2.lower() + '.png']
-#     
 
 
 
