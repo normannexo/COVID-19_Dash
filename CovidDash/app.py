@@ -228,7 +228,7 @@ def get_germany_graphs():
         [
             html.H4('Choose federal states:', style={'color':'black'}),
             dcc.Dropdown(
-                id='states', value=['Bayern', 'Nordrhein-Westfalen', 'Baden-Württemberg'], multi=True, style={'background':'white', 'color':'black'},
+                id='states', value=['Bayern', 'Nordrhein-Westfalen'], multi=True, style={'background':'white', 'color':'black'},
                 options=ddoptions
                 
             ),
