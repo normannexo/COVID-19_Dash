@@ -124,6 +124,8 @@ class RKIdata():
         return df_rki
     def get_last_update(self):
         return self.df.reset_index().date.max()
+    def get_states(self):
+        return self.df.reset_index()['Bundesland'].unique()
 
 
 class Italydata():
