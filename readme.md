@@ -9,4 +9,4 @@ Currently running at (http://nexolin.de:9090)
 
 Screenshot:
 
-![dashboard screenshot]('./IMG/screenshot.JPG')
+![dashboard screenshot](https://raw.githubusercontent.com/normannexo/COVID-19_Dash/include_live_updates/IMG/screenshot.JPG)
