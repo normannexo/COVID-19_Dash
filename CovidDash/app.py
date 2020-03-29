@@ -33,12 +33,13 @@ server = app.server
 TIMEOUT = 60*60*2
 
 jh = datautils.JHdata()
+torben = 'Torben'
 
 @cache.memoize(timeout=TIMEOUT)
-def init_jh():
+def update_jh():
+    global jh
     jh = datautils.JHdata()
-    return jh
-
+   
 @cache.memoize(timeout=TIMEOUT)
 def init_rki():
     return  datautils.RKIdata()
@@ -100,17 +101,87 @@ navbar = html.Div(
     ]
 )
 
+
+#######
+#### Source card
+
+def create_source_div(src, link):
+    div = html.Div(
+            ['Source: ', html.A(src, href=link)]
+        )
+   
+
+    return div
 #####
 ## Graphs and Tables
 #####
 
 # JH
 
-
-
-graph_world = dcc.Graph(
+def get_world_graphs():
+    df_world = jh.get_current_world()
+    print(df_world)
+    world_fig = go.Figure(layout=plot_layout)
+    world_fig.add_trace(go.Scatter(x=df_world.date,y=df_world.confirmed,
+                        mode='lines',
+                        name='confirmed'
+                        ))
+    world_fig.add_trace(go.Scatter(x=df_world.date, y=df_world.deaths,
+                        mode='lines+markers', name='deaths'))
+    world_fig.update_layout(title_text="World")
+    graph_world = dcc.Graph(
         id = "gWorld",
-)
+        figure = world_fig
+        )
+    
+    
+    table_world_data =  jh.df.groupby('date').agg({'confirmed':'sum', 'confirmed_diff':'sum', 'deaths':'sum'}).reset_index().nlargest(3,'date')
+    print(table_world_data)
+    table_world_data['date'] = table_world_data['date'].dt.strftime('%Y/%m/%d')
+    table_world_data.columns= ['date', 'confirmed', 'confirmed new', 'deaths']
+    table_columns=[{"name": i, "id": i} for i in table_world_data.columns]
+    
+    
+    table_world = dash_table.DataTable(
+        id='world_table',
+        columns=table_columns,
+        data = table_world_data.to_dict('records'),
+        style_cell = {
+                    'font_family': 'Arial',
+                    'font_size': '1.4em',
+                    'text_align': 'center'
+                },
+    )
+
+
+    
+    ####
+    ### Controls
+    #####
+    ddoptions = [{'label':col, 'value':col} for col in jh.get_countries()]
+    controls_dd_country = html.Div(
+        
+        [
+            html.H4('Choose countries:', style={'color':'black'}),
+            dcc.Dropdown(
+                id='country', value=['Germany', 'Italy', 'US'], multi=True, style={'background':'white', 'color':'black'},
+                options=ddoptions
+                
+            ),
+    
+    
+        ]
+        
+    )
+    
+    return graph_world, table_world, controls_dd_country
+
+
+
+
+
+
+
 
 
 
@@ -191,21 +262,6 @@ def get_italy_graphs():
 
 
 
-####
-### Controls
-#####
-controls_dd_country = html.Div(
-    
-    [
-        html.H4('Choose countries:', style={'color':'black'}),
-        dcc.Dropdown(
-            id='country', value=['Germany', 'Italy', 'US'], multi=True, style={'background':'white', 'color':'black'}
-        ),
-
-
-    ]
-    
-)
 
 country_card = dbc.Card(
     [
@@ -230,15 +286,6 @@ country_card = dbc.Card(
 #############
 
 
-
-table_world = dash_table.DataTable(
-    id='world_table',
-    style_cell = {
-                'font_family': 'Arial',
-                'font_size': '1.4em',
-                'text_align': 'center'
-            },
-)
 
 
 
@@ -269,18 +316,24 @@ graph_country_progress  = dcc.Graph(
 
 # JH
 
-rows_jh_list = [
-    dbc.Row([dbc.Col(graph_world, md=12)], style={'padding':'3em'}),
-    dbc.Row([dbc.Col(table_world, md=12)]),
-    html.Br(),
-    dbc.Row([dbc.Col(controls_dd_country, md=8)], justify='center'),
-    dbc.Row(graph_country_c, justify='center'),
-    dbc.Row(graph_country_cd , justify='center'),
-    dbc.Row(graph_country_progress , justify='center'),
-    
-    ]
+def get_jh_layout():
+    update_jh()
+    sdiv = create_source_div(' Johns Hopkins CSSE', 'https://github.com/CSSEGISandData/COVID-19')
+    graph_world, table_world, dd_country = get_world_graphs()
+    rows_jh_list = [
+        sdiv,
+        dbc.Row([dbc.Col(graph_world, md=12)], style={'padding':'3em'}),
+        dbc.Row([dbc.Col(table_world, md=12)]),
+        html.Br(),
+        dbc.Row([dbc.Col(dd_country, md=8)], justify='center'),
+        dbc.Row(graph_country_c, justify='center'),
+        dbc.Row(graph_country_cd , justify='center'),
+        dbc.Row(graph_country_progress , justify='center'),
+        
+        ]
 
-jh_layout = html.Div(rows_jh_list)
+    jh_layout = html.Div(rows_jh_list)
+    return jh_layout
 #graphRow2 = dbc.Row([dbc.Col(country_table, md = 8)])
 
 #RKI
@@ -289,8 +342,10 @@ jh_layout = html.Div(rows_jh_list)
 
 
 def get_rki_layout():
+    sdiv = create_source_div('Robert Koch Institut,  Germany', 'https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Fallzahlen.html')
     graph_c, graph_cn = get_germany_graphs()
     rows_rki_list = [
+        sdiv,
         dbc.Row([dbc.Col(graph_c, md=12)], style={'padding':'3em'}),
         dbc.Row([dbc.Col(graph_cn, md=12)], style={'padding':'3em'})
     ]
@@ -299,8 +354,10 @@ def get_rki_layout():
 ### Italy
 
 def get_italy_layout():
+    sdiv = create_source_div('Dipartimento della Protezione Civile, Italy', 'https://github.com/pcm-dpc/COVID-19')
     graph_c, graph_cn = get_italy_graphs()
     rows_italy_list = [
+        sdiv,
         dbc.Row([dbc.Col(graph_c)]),
         dbc.Row([dbc.Col(graph_cn)])
         ]
@@ -325,11 +382,7 @@ app.layout = serve_layout
 @app.callback(
     [Output("gCountry_cd", "figure"),
     Output("gCountry_c", "figure"),
-    Output("gCountry_p", "figure"),
-    Output("gWorld", "figure"),
-    Output('country', 'options'),
-    Output('world_table','data'),
-    Output('world_table', 'columns')
+    Output("gCountry_p", "figure")
     ]
     ,
     [
@@ -338,7 +391,7 @@ app.layout = serve_layout
 )
 def make_graph_jh(country):
     # minimal input validation, make sure there's at least one cluster
-    jht = init_jh()
+    jht = jh
     plot_data = jht.df[(jht.df['Country/Region'].isin(country)) & (jht.df.date > (jht.get_last_update() - timedelta(days=21)))]
     #fig2 = px.bar(plot_data, x='date', y='confirmed')
     country_fig = go.Figure(layout=plot_layout)
@@ -347,15 +400,7 @@ def make_graph_jh(country):
         country_fig.add_trace(go.Bar(x=pdata.date, y=pdata.confirmed_diff, name=c ))
     country_fig.update_layout(title_text="confirmed new")
     
-    df_world = jht.get_current_world()
-    world_fig = go.Figure(layout=plot_layout)
-    world_fig.add_trace(go.Scatter(x=df_world.date,y=df_world.confirmed,
-                        mode='lines',
-                        name='confirmed'
-                        ))
-    world_fig.add_trace(go.Scatter(x=df_world.date, y=df_world.deaths,
-                        mode='lines+markers', name='deaths'))
-    world_fig.update_layout(title_text="World")
+   
     
     plot_data = jht.df[(jht.df['Country/Region'].isin(country)) & (jht.df.date > (jht.get_last_update() - timedelta(days=21)))]
     country_c_fig = go.Figure(layout=plot_layout)
@@ -381,15 +426,10 @@ def make_graph_jh(country):
     )
     country_pg_fig.update_yaxes(range=[math.log10(x) for x in yrange])
     
-    ddoptions = [{'label':col, 'value':col} for col in jh.get_countries()]
     
-    table_world_data =  jh.df.groupby('date').agg({'confirmed':'sum', 'confirmed_diff':'sum', 'deaths':'sum'}).reset_index().nlargest(3,'date')
-    table_world_data['date'] = table_world_data['date'].dt.strftime('%Y/%m/%d')
-    table_world_data.columns= ['date', 'confirmed', 'confirmed new', 'deaths']
-    table_columns=[{"name": i, "id": i} for i in table_world_data.columns]
    
     
-    return country_fig, country_c_fig, country_pg_fig, world_fig, ddoptions,table_world_data.to_dict('records'), table_columns
+    return country_fig, country_c_fig, country_pg_fig
 
    
 
@@ -397,7 +437,7 @@ def make_graph_jh(country):
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
     if pathname in ["/", "/johnshopkins"]:
-        return jh_layout
+        return get_jh_layout()
     elif pathname == "/rki":
         return get_rki_layout()
     elif pathname == "/italy":

@@ -7,8 +7,7 @@ from bs4 import BeautifulSoup
 class JHdata:
     
     def __init__(self):
-        self.update_df()
-       # self.df = self.get_johnshopkins_df()
+         self.df = self.get_johnshopkins_df()
 
     def get_johnshopkins_df(self):
         df_confirmed_raw = pd.read_csv('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv')
