@@ -43,6 +43,11 @@ def init_jh():
 def init_rki():
     return  datautils.RKIdata()
 
+@cache.memoize(timeout=TIMEOUT)
+def init_it():
+    return  datautils.Italydata()
+
+
 
 ### 
 ## GET DATA
@@ -51,10 +56,10 @@ def init_rki():
 #jh = datautils.JHdata()
 #print(jh.df[jh.df['Country/Region']=='Germany'][['date','confirmed']])
 
-rki = datautils.RKIdata()
+#rki = datautils.RKIdata()
 #print(rki.df)
 
-it = datautils.Italydata()
+#it = datautils.Italydata()
 
 
 
@@ -152,32 +157,36 @@ def get_germany_graphs():
 #####
 ### Italy - Graphs and Tables
 #### 
-italy_overall = it.df.loc[(it.get_last_update()-timedelta(days=28)):].reset_index()
-italy_fig = go.Figure(layout=plot_layout)
-italy_fig.add_trace(go.Scatter(x=italy_overall.date,y=italy_overall.confirmed,
-                    mode='lines+markers',
-                    name='confirmed'
-                    ))
-italy_fig.add_trace(go.Scatter(x=italy_overall.date, y=italy_overall.deaths,
-                    mode='lines+markers', name='deaths'))
-italy_fig.update_layout(title_text="Italy")
-
-graph_italy = dcc.Graph(
-        id = "gItaly",
-        figure = italy_fig #px.line(df_world, x='date', y='confirmed')
-)
-
-
-italy_new_fig = go.Figure(layout=plot_layout)
-italy_new_fig.add_trace(go.Bar(x=italy_overall.date,y=italy_overall.confirmed_new,
-                    name='confirmed new'
-                    ))
-italy_new_fig.update_layout(title_text="Italy - confirmed new")
-
-graph_italy_new = dcc.Graph(
-        id = "gItalyNew",
-        figure = italy_new_fig
-)
+def get_italy_graphs():
+    it = init_it()
+    italy_overall = it.df.loc[(it.get_last_update()-timedelta(days=28)):].reset_index()
+    italy_fig = go.Figure(layout=plot_layout)
+    italy_fig.add_trace(go.Scatter(x=italy_overall.date,y=italy_overall.confirmed,
+                        mode='lines+markers',
+                        name='confirmed'
+                        ))
+    italy_fig.add_trace(go.Scatter(x=italy_overall.date, y=italy_overall.deaths,
+                        mode='lines+markers', name='deaths'))
+    italy_fig.update_layout(title_text="Italy")
+    
+    graph_italy = dcc.Graph(
+            id = "gItaly",
+            figure = italy_fig #px.line(df_world, x='date', y='confirmed')
+    )
+    
+    
+    italy_new_fig = go.Figure(layout=plot_layout)
+    italy_new_fig.add_trace(go.Bar(x=italy_overall.date,y=italy_overall.confirmed_new,
+                        name='confirmed new'
+                        ))
+    italy_new_fig.update_layout(title_text="Italy - confirmed new")
+    
+    graph_italy_new = dcc.Graph(
+            id = "gItalyNew",
+            figure = italy_new_fig
+    )
+    
+    return graph_italy, graph_italy_new
 
 
 
@@ -289,12 +298,14 @@ def get_rki_layout():
 
 ### Italy
 
-rows_italy_list = [
-    dbc.Row([dbc.Col(graph_italy)]),
-    dbc.Row([dbc.Col(graph_italy_new)])
-    ]
-
-italy_layout = html.Div(rows_italy_list)
+def get_italy_layout():
+    graph_c, graph_cn = get_italy_graphs()
+    rows_italy_list = [
+        dbc.Row([dbc.Col(graph_c)]),
+        dbc.Row([dbc.Col(graph_cn)])
+        ]
+    italy_layout = html.Div(rows_italy_list)
+    return italy_layout
 ######################
 ### MAIN LAYOUT #####
 ######################
@@ -390,7 +401,7 @@ def render_page_content(pathname):
     elif pathname == "/rki":
         return get_rki_layout()
     elif pathname == "/italy":
-        return italy_layout
+        return get_italy_layout()
     # If the user tries to reach a different page, return a 404 message
     return dbc.Jumbotron(
         [
