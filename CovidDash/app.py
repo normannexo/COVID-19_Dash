@@ -39,7 +39,7 @@ italy = datautils.Italydata()
 @cache.memoize(timeout=TIMEOUT)
 def update_jh():
     global jh
-    jh = datautils.JHdata()
+    jh.update_data()
    
 @cache.memoize(timeout=TIMEOUT)
 def update_rki():
@@ -132,14 +132,14 @@ def get_world_graphs():
                         ))
     world_fig.add_trace(go.Scatter(x=df_world.date, y=df_world.deaths,
                         mode='lines+markers', name='deaths'))
-    world_fig.update_layout(title_text="World")
+    world_fig.update_layout(title_text="World", yaxis_title='cumulative confirmed cases', xaxis_title='date')
     graph_world = dcc.Graph(
         id = "gWorld",
         figure = world_fig
         )
     
     
-    table_world_data =  jh.df.groupby('date').agg({'confirmed':'sum', 'confirmed_diff':'sum', 'deaths':'sum'}).reset_index().nlargest(3,'date')
+    table_world_data =  jh.df.groupby('date').agg({'confirmed':'sum', 'confirmed_diff':'sum', 'deaths':'sum'}).reset_index().nlargest(5,'date')
     print(table_world_data)
     table_world_data['date'] = table_world_data['date'].dt.strftime('%Y/%m/%d')
     table_world_data.columns= ['date', 'confirmed', 'confirmed new', 'deaths']
@@ -155,6 +155,7 @@ def get_world_graphs():
                     'font_size': '1.4em',
                     'text_align': 'center'
                 },
+        style_as_list_view = True
     )
 
 
@@ -184,7 +185,7 @@ def get_world_graphs():
 
 def get_radio_items():
     ritems = dbc.FormGroup([
-        html.H4('Choose type:'),
+        html.H4('Choose type:',  style={'color':'black'}),
       dbc.RadioItems(
             options=[
                 {"label": "confirmed cases", "value": 'confirmed'},
@@ -357,9 +358,10 @@ def get_jh_layout():
     rows_jh_list = [
         sdiv,
         dbc.Row([dbc.Col(graph_world, md=12)], style={'padding':'3em'}),
+        dbc.Row(html.H4('Development in last 5 days:', style={'color':'black'})),
         dbc.Row([dbc.Col(table_world, md=12)]),
-        html.Br(),
-        dbc.Row([dbc.Col(dd_country, md=8), dbc.Col(get_radio_items())], justify='center'),
+        html.Br(),html.Br(),
+        dbc.Row([dbc.Col(dd_country, md=8), dbc.Col(get_radio_items(), md=4)], justify='center'),
         dbc.Row(graph_country_c, justify='center'),
         dbc.Row(graph_country_cd , justify='center'),
         dbc.Row(graph_country_progress , justify='center'),
@@ -480,12 +482,11 @@ def make_graph_rki(states):
 def make_graph_jh(country, ptype):
     jht = jh
     plot_data = jht.df[(jht.df['Country/Region'].isin(country)) & (jht.df.date > (jht.get_last_update() - timedelta(days=21)))]
-    #fig2 = px.bar(plot_data, x='date', y='confirmed')
     country_fig = go.Figure(layout=plot_layout)
     for c in country:
         pdata = plot_data[plot_data['Country/Region']==c]
         country_fig.add_trace(go.Bar(x=pdata.date, y=pdata[(ptype + '_diff')], name=c ))
-    country_fig.update_layout(title_text="confirmed new")
+    country_fig.update_layout(title_text="new confirmed cases by country", xaxis_title='date', yaxis_title='new confirmed cases')
     
    
     
@@ -494,10 +495,13 @@ def make_graph_jh(country, ptype):
     for c in country:
         pdata = plot_data[plot_data['Country/Region']==c]
         country_c_fig.add_trace(go.Bar(x=pdata.date, y=pdata[ptype], name=c ))
-    country_c_fig.update_layout(title_text="confirmed")
+    country_c_fig.update_layout(title_text="confirmed cases by country", xaxis_title='date', yaxis_title='confirmed cases')
     
     
     
+    name_type = "confirmed cases"
+    if ptype == 'deaths':
+        name_type = 'deaths'
     plot_data = jht.df[(jht.df['Country/Region'].isin(country))]
     n = 1000
     if (ptype == 'deaths'):
@@ -511,7 +515,7 @@ def make_graph_jh(country, ptype):
     for c in country:
         pdata = plot_data[plot_data['Country/Region']==c]
         country_pg_fig.add_trace(go.Scatter(x=pdata.days, y=pdata[ptype], name=c ,mode='lines+markers'))
-    country_pg_fig.update_layout(title_text="Days since {} cases (log)".format(ptype), xaxis_title='days', yaxis_title=ptype, yaxis_type="log",  yaxis = dict(
+    country_pg_fig.update_layout(title_text="Cumulative number of {} since {} {}  (log)".format(name_type, n, name_type), xaxis_title='days', yaxis_title=ptype, yaxis_type="log",  yaxis = dict(
         tick0 = n
         )
     )

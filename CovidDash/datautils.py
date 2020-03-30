@@ -38,6 +38,8 @@ class JHdata:
         df_covid_19_pivot['confirmed_diff'] = df_covid_19_pivot.groupby('Country/Region').confirmed.diff()
         df_covid_19_pivot['deaths_diff'] = df_covid_19_pivot.groupby('Country/Region').deaths.diff()
         return df_covid_19_pivot
+    def update_data(self):
+        self.df = self.get_data()
 
 
 class RKIdata():
