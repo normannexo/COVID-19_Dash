@@ -182,7 +182,20 @@ def get_world_graphs():
 
 
 
-
+def get_radio_items():
+    ritems = dbc.FormGroup([
+        html.H4('Choose type:'),
+      dbc.RadioItems(
+            options=[
+                {"label": "confirmed cases", "value": 'confirmed'},
+                {"label": "deaths", "value": 'deaths'},
+            ],
+            value='confirmed',
+            id="type_input",
+        )
+    ])
+    return ritems
+    
 
 
 
@@ -346,7 +359,7 @@ def get_jh_layout():
         dbc.Row([dbc.Col(graph_world, md=12)], style={'padding':'3em'}),
         dbc.Row([dbc.Col(table_world, md=12)]),
         html.Br(),
-        dbc.Row([dbc.Col(dd_country, md=8)], justify='center'),
+        dbc.Row([dbc.Col(dd_country, md=8), dbc.Col(get_radio_items())], justify='center'),
         dbc.Row(graph_country_c, justify='center'),
         dbc.Row(graph_country_cd , justify='center'),
         dbc.Row(graph_country_progress , justify='center'),
@@ -460,17 +473,18 @@ def make_graph_rki(states):
     ]
     ,
     [
-        Input('country', "value")
+        Input('country', "value"),
+        Input('type_input', 'value')
     ],
 )
-def make_graph_jh(country):
+def make_graph_jh(country, ptype):
     jht = jh
     plot_data = jht.df[(jht.df['Country/Region'].isin(country)) & (jht.df.date > (jht.get_last_update() - timedelta(days=21)))]
     #fig2 = px.bar(plot_data, x='date', y='confirmed')
     country_fig = go.Figure(layout=plot_layout)
     for c in country:
         pdata = plot_data[plot_data['Country/Region']==c]
-        country_fig.add_trace(go.Bar(x=pdata.date, y=pdata.confirmed_diff, name=c ))
+        country_fig.add_trace(go.Bar(x=pdata.date, y=pdata[(ptype + '_diff')], name=c ))
     country_fig.update_layout(title_text="confirmed new")
     
    
@@ -479,22 +493,26 @@ def make_graph_jh(country):
     country_c_fig = go.Figure(layout=plot_layout)
     for c in country:
         pdata = plot_data[plot_data['Country/Region']==c]
-        country_c_fig.add_trace(go.Bar(x=pdata.date, y=pdata.confirmed, name=c ))
+        country_c_fig.add_trace(go.Bar(x=pdata.date, y=pdata[ptype], name=c ))
     country_c_fig.update_layout(title_text="confirmed")
     
     
     
     plot_data = jht.df[(jht.df['Country/Region'].isin(country))]
-    plot_data.loc[:,'days'] = plot_data.groupby(['Country/Region', 'date']).filter(lambda x: x['confirmed']>1000).groupby('Country/Region').cumcount() + 1
+    n = 1000
+    if (ptype == 'deaths'):
+        n=100
+        
+    plot_data.loc[:,'days'] = plot_data.groupby(['Country/Region', 'date']).filter(lambda x: x[ptype]>n).groupby('Country/Region').cumcount() + 1
     #fig2 = px.bar(plot_data, x='date', y='confirmed')
     plot_data = plot_data.reset_index()
-    yrange = [1000, plot_data.confirmed.max()]
+    yrange = [n, plot_data.confirmed.max()]
     country_pg_fig = go.Figure(layout=plot_layout)
     for c in country:
         pdata = plot_data[plot_data['Country/Region']==c]
-        country_pg_fig.add_trace(go.Scatter(x=pdata.days, y=pdata.confirmed, name=c ,mode='lines+markers'))
-    country_pg_fig.update_layout(title_text="Days since 1000 cases (log)", xaxis_title='days', yaxis_title='confirmed cases', yaxis_type="log",  yaxis = dict(
-        tick0 = 1000
+        country_pg_fig.add_trace(go.Scatter(x=pdata.days, y=pdata[ptype], name=c ,mode='lines+markers'))
+    country_pg_fig.update_layout(title_text="Days since {} cases (log)".format(ptype), xaxis_title='days', yaxis_title=ptype, yaxis_type="log",  yaxis = dict(
+        tick0 = n
         )
     )
     country_pg_fig.update_yaxes(range=[math.log10(x) for x in yrange])
