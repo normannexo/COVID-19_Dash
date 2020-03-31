@@ -32,24 +32,20 @@ server = app.server
 
 TIMEOUT = 60*60*2
 
-jh = datautils.JHdata()
-rki = datautils.RKIdata
-italy = datautils.Italydata()
-
 @cache.memoize(timeout=TIMEOUT)
-def update_jh():
-    global jh
-    jh.update_data()
+def init_jh():
+     jh = datautils.JHdata()
+     return jh
    
 @cache.memoize(timeout=TIMEOUT)
-def update_rki():
-    global rki
+def init_rki():
     rki =  datautils.RKIdata()
+    return rki
 
 @cache.memoize(timeout=TIMEOUT)
-def update_it():
-    global italy
+def init_it():
     italy =  datautils.Italydata()
+    return italy
 
 
 
@@ -123,6 +119,7 @@ def create_source_div(src, link):
 # JH
 
 def get_world_graphs():
+    jh = init_jh()
     df_world = jh.get_current_world()
     print(df_world)
     world_fig = go.Figure(layout=plot_layout)
@@ -207,7 +204,7 @@ def get_radio_items():
 # RKI
 
 def get_germany_graphs():
-    
+    rki = init_rki()
     germany_fig_df = rki.df.groupby(level=1).agg({'confirmed':'sum', 'deaths':'sum'}).reset_index()
     germany_fig = go.Figure(layout=plot_layout)
     germany_fig.add_trace(go.Scatter(x=germany_fig_df.date,y=germany_fig_df.confirmed,
@@ -264,7 +261,7 @@ def get_germany_graphs():
 ### Italy - Graphs and Tables
 #### 
 def get_italy_graphs():
-    update_it()
+    italy = init_it()
     italy_overall = italy.df.loc[(italy.get_last_update()-timedelta(days=28)):].reset_index()
     italy_fig = go.Figure(layout=plot_layout)
     italy_fig.add_trace(go.Scatter(x=italy_overall.date,y=italy_overall.confirmed,
@@ -352,7 +349,6 @@ graph_rki_progress  = dcc.Graph(
 # JH
 
 def get_jh_layout():
-    update_jh()
     sdiv = create_source_div(' Johns Hopkins CSSE', 'https://github.com/CSSEGISandData/COVID-19')
     graph_world, table_world, dd_country = get_world_graphs()
     rows_jh_list = [
@@ -378,7 +374,6 @@ def get_jh_layout():
 
 
 def get_rki_layout():
-    update_rki()
     sdiv = create_source_div('Robert Koch Institut,  Germany', 'https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Fallzahlen.html')
     graph_c, graph_cn, dd_s = get_germany_graphs()
     rows_rki_list = [
@@ -431,6 +426,7 @@ app.layout = serve_layout
     ],
 )
 def make_graph_rki(states):
+    rki = init_rki()
     plot_data = rki.df.loc[pd.IndexSlice[states,   (rki.get_last_update() - timedelta(days=21)):],:].reset_index()
     #fig2 = px.bar(plot_data, x='date', y='confirmed')
     states_cd_fig = go.Figure(layout=plot_layout)
@@ -480,7 +476,7 @@ def make_graph_rki(states):
     ],
 )
 def make_graph_jh(country, ptype):
-    jht = jh
+    jht = init_jh()
     plot_data = jht.df[(jht.df['Country/Region'].isin(country)) & (jht.df.date > (jht.get_last_update() - timedelta(days=21)))]
     country_fig = go.Figure(layout=plot_layout)
     for c in country:
@@ -490,7 +486,6 @@ def make_graph_jh(country, ptype):
     
    
     
-    plot_data = jht.df[(jht.df['Country/Region'].isin(country)) & (jht.df.date > (jht.get_last_update() - timedelta(days=21)))]
     country_c_fig = go.Figure(layout=plot_layout)
     for c in country:
         pdata = plot_data[plot_data['Country/Region']==c]
@@ -505,7 +500,7 @@ def make_graph_jh(country, ptype):
     plot_data = jht.df[(jht.df['Country/Region'].isin(country))]
     n = 1000
     if (ptype == 'deaths'):
-        n=100
+        n=10
         
     plot_data.loc[:,'days'] = plot_data.groupby(['Country/Region', 'date']).filter(lambda x: x[ptype]>n).groupby('Country/Region').cumcount() + 1
     #fig2 = px.bar(plot_data, x='date', y='confirmed')
@@ -537,7 +532,7 @@ def make_graph_jh(country, ptype):
     ],
 )
 def make_graph_italy(regions):
-    Ital
+
     plot_data = jht.df[(jht.df['Country/Region'].isin(country)) & (jht.df.date > (jht.get_last_update() - timedelta(days=21)))]
     #fig2 = px.bar(plot_data, x='date', y='confirmed')
     country_fig = go.Figure(layout=plot_layout)
